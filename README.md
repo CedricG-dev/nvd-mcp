@@ -112,6 +112,10 @@ get info about vulnerability with id  CVE-2025-53770 and trace if you used a mcp
 
 ```
 
-and we get the following response
+We get the following response with local LLM `qwen3.6:latest`
 
-![RESPONSE](pictures/response.png)
+![RESPONSE QWEN](pictures/response-qwen.png)
+
+We get the following response with remote `Claude Sonnet 5`
+
+![RESPONS SONNET](pictures/response-claude.png)
