@@ -6,7 +6,7 @@
   },
   "deployment": {
     "transport": "streamable-http",
-    "port":8000,
+    "port":8001,
     "path": "/nvd-mcp",
     "log_level": "INFO"
   }
