@@ -1,1 +1,6 @@
 data/vulnerability.db
+src/vulnerability_mcp_server.egg-info
+**/__pycache__/
+src/models/__pycache__/**
+src/models/__pycache__/vulnerability.cpython-314.pyc
+src/tools/__pycache__/database_clients.cpython-314.pyc
