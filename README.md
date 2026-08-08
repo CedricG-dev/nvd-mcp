@@ -50,19 +50,40 @@ vuln-db --init
 (CVE + EPSS data), plus the CPE dictionary and CPE-match feeds used by the
 `resolve_cpe`/`search_cves_by_cpe` tools. It's required on first run, is safe
 to rerun, and can take a while (the CPE-match feed alone is ~795MB
-compressed). See `AGENTS.md` for all `vuln-db` flags (e.g. `-f LOCAL` to sync
-from pre-downloaded files instead of hitting the network) and refreshing the
-database later (plain `vuln-db`, without `--init`).
+compressed).
 
 6) Launch the MCP server
 
 ```powershell
-python src/vulnerability-mcp-server.py
+fastmcp run
 ```
+
 
 The terminal should render: 
 
 ![SERVER START](pictures/launch-server.png)
+
+
+The default configuation is set by file `fastmcp.json`
+
+```json
+{
+  "$schema": "https://gofastmcp.com/public/schemas/fastmcp.json/v1.json",
+  "source": {
+    "path": "src/vulnerability-mcp-server.py",
+    "entrypoint": "mcp"
+  },
+  "deployment": {
+    "transport": "streamable-http",
+    "port":8000,
+    "path": "/nvd-mcp",
+    "log_level": "INFO"
+  }
+}
+```
+
+> [!TIP]
+> If you need to change it and update some configuration like port or deployment path, adapt following documentation to your updates.
 
 
 ## Test MCP server
@@ -82,11 +103,11 @@ Now a browser is opened and display MCP inspector
 
 Click on `Add Servers` and select `+ Add manually`
 
-Set VULN-SERVER as Server ID
+Set `NVD-MCP` as Server ID
 
 Select `streamable-http` as Transport
 
-Set URL with **http://localhost:8000/mcp** and click on Add
+Set URL with **http://localhost:8000/nvd-mcp** and click on Add
 
 A new server appears: 
 
