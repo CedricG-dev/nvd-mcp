@@ -6,9 +6,9 @@
   },
   "plugin": ["@ex-machina/opencode-anthropic-auth"],
   "mcp": {
-    "vulnerability-mcp": {
+    "nvd-mcp": {
       "type": "remote",
-      "url": "http://localhost:8000/mcp",
+      "url": "http://localhost:8000/nvd-mcp",
       "enabled": true
     }
   }

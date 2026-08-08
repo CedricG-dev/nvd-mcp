@@ -1,0 +1,13 @@
+{
+  "$schema": "https://gofastmcp.com/public/schemas/fastmcp.json/v1.json",
+  "source": {
+    "path": "src/vulnerability-mcp-server.py",
+    "entrypoint": "mcp"
+  },
+  "deployment": {
+    "transport": "streamable-http",
+    "port":8000,
+    "path": "/nvd-mcp",
+    "log_level": "INFO"
+  }
+}
