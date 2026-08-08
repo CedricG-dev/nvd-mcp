@@ -62,7 +62,7 @@ class DatabaseClient():
 
     _CVE_ROW_COLUMNS = (
         "cve_id, base_cvss_score, vector, version, severity, description, has_kev,"
-        "epss_score,epss_percentile,published_date,exploit_date,references_count,weaknesses_count"
+        "epss_score,epss_percentile,published_date,exploit_date,references_count,weaknesses_count,weaknesses"
     )
 
     def fetch_data(self, vulnerability: Vulnerability):
@@ -93,12 +93,13 @@ class DatabaseClient():
         vulnerability.severity = result[4]
         vulnerability.description = result[5]
         vulnerability.has_kev = bool(result[6])
-        vulnerability.epss_score = result[7] * 100 if result[7] is not None else 0
-        vulnerability.epss_percentile = result[8] * 100 if result[8] is not None else 0
+        vulnerability.epss_score = result[7]
+        vulnerability.epss_percentile = result[8]
         vulnerability.published_date = result[9]
         vulnerability.exploit_date = result[10]
         vulnerability.references_count = result[11]
         vulnerability.weaknesses_count = result[12]
+        vulnerability.weaknesses = result[13]
 
     def fetch_batch_data(self, cve_ids: list[str]) -> dict:
         """
@@ -252,7 +253,7 @@ class DatabaseClient():
 
         self.cur.execute(
             """
-            SELECT cve_id, base_cvss_score, severity, has_kev, published_date, description
+            SELECT cve_id, base_cvss_score, severity, has_kev, published_date, description,weaknesses
             FROM cves
             WHERE description LIKE ? ESCAPE '\\'
             ORDER BY base_cvss_score DESC
@@ -267,6 +268,7 @@ class DatabaseClient():
                 "severity": row[2],
                 "has_kev": bool(row[3]),
                 "published_date": row[4],
+                "weaknesses": row[6],
                 "description": row[5],
             }
             for row in self.cur.fetchall()
@@ -323,7 +325,7 @@ class DatabaseClient():
             SELECT DISTINCT m.cve_id, m.criteria, m.match_criteria_id,
                    m.version_start_including, m.version_start_excluding,
                    m.version_end_including, m.version_end_excluding,
-                   c.base_cvss_score, c.severity, c.has_kev, c.published_date, c.description
+                   c.base_cvss_score, c.severity, c.has_kev, c.published_date, c.description,c.weaknesses
             FROM cpe_matches m
             JOIN cves c ON c.cve_id = m.cve_id
             WHERE m.vendor = ? AND m.product = ?
@@ -339,7 +341,7 @@ class DatabaseClient():
         seen_cve_ids = set()
         for row in rows:
             (cve_id, criteria, match_criteria_id, start_incl, start_excl, end_incl, end_excl,
-             base_score, severity, has_kev, published_date, description) = row
+             base_score, severity, has_kev, published_date, description,weaknesses) = row
             if cve_id in seen_cve_ids:
                 continue
 
@@ -370,6 +372,7 @@ class DatabaseClient():
                     "severity": severity,
                     "has_kev": bool(has_kev),
                     "published_date": published_date,
+                    "weaknesses": weaknesses,
                     "description": description,
                 })
                 if len(results) >= limit:
@@ -602,7 +605,8 @@ class DataBaseManager:
                 epss_score REAL,
                 epss_percentile REAL,
                 references_count INTEGER,
-                weaknesses_count INTEGER
+                weaknesses_count INTEGER,
+                weaknesses TEXT
                     
             );
         """)
@@ -784,8 +788,8 @@ class DataBaseManager:
                     cve_entries = self._extract_cve_entries(cve_data)
                     self.cursor.executemany("""
                         INSERT OR IGNORE INTO cves (
-                            cve_id,published_date, base_cvss_score, vector, version, severity, description, has_kev,exploit_date,references_count,weaknesses_count
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            cve_id,published_date, base_cvss_score, vector, version, severity, description, has_kev,exploit_date,references_count,weaknesses_count,weaknesses
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
                     """, [cve_entries])
                     self._parse_configurations(cve_data.get("id"), cve_data.get("configurations", []))
 
@@ -857,15 +861,22 @@ class DataBaseManager:
             self._parse_weaknesses(cve_entries,cve_data.get("weaknesses")) # type: ignore
         else:
             cve_entries.append("0")
+            cve_entries.append("")
         return cve_entries
 
     def _parse_weaknesses(self, cve_entries: list, weaknesses: list[dict]) -> None:
         count_weaknesses = 0
+        weaknessesData = ''
         for weakness_list in weaknesses:
-            if weakness_list.get("type") and  weakness_list.get("type") == "Primary":
-                valid_descriptions = [desc for desc in weakness_list.get("description") if isinstance(desc, dict) and desc.get("value", "").startswith("CWE-")] # type: ignore
-                count_weaknesses = len(valid_descriptions)
+            valid_descriptions = [desc for desc in weakness_list.get("description") if isinstance(desc, dict) and desc.get("value", "").startswith("CWE-")] # type: ignore
+                
+            for description in valid_descriptions:
+                 weaknessesData += " "+description.get("value")
+            weaknessesData = weaknessesData.strip()
+            count_weaknesses = len(valid_descriptions)
+                
         cve_entries.append(count_weaknesses)
+        cve_entries.append(weaknessesData)
 
 
     def _parse_metrics(
