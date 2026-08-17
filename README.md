@@ -1,6 +1,7 @@
 # VulnerabilityMCPServer
 
-Test d'un serveur MCP local sur le protocol HTTP
+Test d'un serveur MCP local sur le protocol HTTP, avec un mode d'exposition
+alternatif en API REST/JSON classique.
 
 ## Prerequisites 
 
@@ -32,120 +33,36 @@ Use other script based on your environment type (activate / activate.bat)
 pip install -e .
 ```
 
-This installs every dependency needed to both run the MCP server and use the
-`vuln-db` CLI (also registered by this command), from the single
-`pyproject.toml` manifest.
+This installs every dependency needed to run the server (either mode) and
+registers the two CLI commands used below, `vuln-db` and `vuln-server`, from
+the single `pyproject.toml` manifest.
 
 5) Build the local vulnerability database
 
 The server reads from a local SQLite database (`data/vulnerability.db`,
-git-ignored) that must be built before first use, with the `vuln-db` CLI
-(always run from the repo root):
+git-ignored) that must be built before first use, with the `vuln-db` CLI:
 
 ```powershell
 vuln-db --init
 ```
 
-`--init` creates the database tables and does a full live sync against NVD/EPSS
-(CVE + EPSS data), plus the CPE dictionary and CPE-match feeds used by the
-`resolve_cpe`/`search_cves_by_cpe` tools. It's required on first run, is safe
-to rerun, and can take a while (the CPE-match feed alone is ~795MB
-compressed).
+See [`docs/vuln-db.md`](docs/vuln-db.md) for the full CLI reference (flags,
+environment variables, offline/LOCAL fetch mode, examples).
 
-6) Launch the MCP server
+6) Launch the server
 
-```powershell
-fastmcp run
-```
-
-
-The terminal should render: 
-
-![SERVER START](pictures/launch-server.png)
-
-
-The default configuation is set by file `fastmcp.json`
-
-```json
-{
-  "$schema": "https://gofastmcp.com/public/schemas/fastmcp.json/v1.json",
-  "source": {
-    "path": "src/vulnerability-mcp-server.py",
-    "entrypoint": "mcp"
-  },
-  "deployment": {
-    "transport": "streamable-http",
-    "port":8000,
-    "path": "/nvd-mcp",
-    "log_level": "INFO"
-  }
-}
-```
-
-> [!TIP]
-> If you need to change it and update some configuration like port or deployment path, adapt following documentation to your updates.
-
-
-## Test MCP server
-
-Open another terminal and launch the command 
+The vulnerability data can be exposed either over the **MCP protocol** or as
+a plain **REST/JSON API**, chosen at startup with the `vuln-server` CLI:
 
 ```powershell
-npx @modelcontextprotocol/inspector
+vuln-server --mode mcp     # MCP protocol, streamable-http, port 8001
+vuln-server --mode rest    # REST/JSON API, port 8080
 ```
 
-> if a prompt ask you if you want to install the package accept
-
-
-Now a browser is opened and display MCP inspector
-
-![MCP INSPECTOR](pictures/inspector.png)
-
-Click on `Add Servers` and select `+ Add manually`
-
-Set `NVD-MCP` as Server ID
-
-Select `streamable-http` as Transport
-
-Set URL with **http://localhost:8000/nvd-mcp** and click on Add
-
-A new server appears: 
-
-![MCP INSPECTOR](pictures/new-server.png)
-
-Toggle on the Connection button at the top-right of the server card
-
-Some info should appear on a right side bar.
-
-
-Click on `Tools` and select `get_cve_by_id`.
-
-![TOOL PICTURES](pictures/tool.png)
-
-
-Fill `cve_id` with for example _CVE-2025-53770_
-
-![RESULT](pictures/result.png)
-
-
-## Available tools
-
-All tools are 100% local at query time (they read from `data/vulnerability.db`,
-no outbound network calls, no API key required):
-
-| Tool | Description |
-| --- | --- |
-| `get_cve_by_id(cve_id)` | Full detail for one CVE, formatted as text. |
-| `batch_search_cves(cve_ids)` | Same as `get_cve_by_id` but for a batch of CVE ids, returning raw fields per id (plus a `found` flag for ids missing locally). |
-| `search_cves_by_keyword(keyword, limit=50)` | Substring search over CVE descriptions, ordered by CVSS score (descending). |
-| `get_epss_score(cve_ids)` | EPSS score/percentile (raw 0-1 fractions) for a list of CVE ids. |
-| `check_kev_status(cve_ids)` | Whether each CVE id is listed in the CISA KEV catalog (boolean membership only). |
-| `get_nvd_sync_status()` | Freshness of the local NVD-derived data, to help decide if a DB refresh is needed. |
-| `search_cves_by_cpe(cpe, limit=50)` | CVEs affecting a given CPE 2.3 string (full or partial, e.g. `cpe:2.3:a:apache:log4j:2.14.1` or just `cpe:2.3:a:apache:log4j`). |
-| `resolve_cpe(keyword, limit=50)` | Keyword search (vendor/product/title) against the CPE dictionary, e.g. to find the exact CPE name for a product before calling `search_cves_by_cpe`. Requires `vuln-db --init` to have been run. |
-
-See `AGENTS.md` for the full details of each tool (return shapes, match
-precision semantics, etc.).
+See [`docs/vuln-server.md`](docs/vuln-server.md) for the full CLI reference:
+configuration (JSON config file per mode, overridable by CLI flags),
+available MCP tools / REST routes, and how to test each mode (MCP Inspector /
+Swagger UI).
 
 
 ## Run OpenCode

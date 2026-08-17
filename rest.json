@@ -1,0 +1,8 @@
+{
+  "description": "Configuration for `vuln-server --mode rest` (REST/JSON API exposition). Mirrors the shape of fastmcp.json (used for `--mode mcp`) so both modes are configured the same way. Every value here can be overridden with a matching CLI flag, e.g. `vuln-server --mode rest --port 9000`.",
+  "deployment": {
+    "host": "127.0.0.1",
+    "port": 8080,
+    "log_level": "INFO"
+  }
+}
